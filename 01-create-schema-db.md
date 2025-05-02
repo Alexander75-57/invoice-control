@@ -9,7 +9,7 @@
 2. For  data base create of Invoices with columns
     1) id
     2) createTS
-    3) value
+    3) value - contains no more than two digits after the comma or dot and rounded to the second decimal place and this value is entered into the database
     4) description
     5) customerId
     6) status 

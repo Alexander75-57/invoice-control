@@ -35,7 +35,19 @@ export type CustomerType = z.infer<typeof customerSchema>;
 export const invoiceSchema = z.object({
   id: z.number().optional(),
   createTS: z.date().optional(),
-  value: z.number().int().positive("Value must be a positive number"),
+  // Value is stored as cents in the database (integer)
+  // The UI handles this as decimal with comma/dot separator
+  value: z.number().int().positive("Value must be a positive number")
+    .refine(
+      val => {
+        // When converting back to decimal, ensure it's valid
+        const decimal = val / 100;
+        return Number.isFinite(decimal) && decimal > 0;
+      },
+      {
+        message: "Value must be a valid positive number"
+      }
+    ),
   description: z.string().optional(),
   customerId: z.number().int().positive("Customer ID is required"),
   status: invoiceStatusSchema
@@ -58,6 +70,6 @@ export const Invoices = pgTable("invoices", {
   createTS: timestamp("createTS").defaultNow().notNull(),
   value: integer("value").notNull(),
   description: text("description"),
-  customerId: integer("customerId").references(() => customers.id).notNull(),
+  customerId: integer("customerId").references(() => Customers.id).notNull(),
   status: varchar("status", { length: 20 }).notNull().$type<InvoiceStatusType>()
 });

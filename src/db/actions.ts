@@ -1,30 +1,30 @@
 import { db } from "./index";
-import { customers, invoices, CustomerType, InvoiceType, InvoiceStatus } from "./schema";
+import { Customers, Invoices, CustomerType, InvoiceType, InvoiceStatus } from "./schema";
 import { and, asc, desc, eq, gte, like, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Customer actions
 export async function getCustomers() {
-  return await db.select().from(customers).orderBy(asc(customers.name));
+  return await db.select().from(Customers).orderBy(asc(Customers.name));
 }
 
 export async function getCustomerById(id: number) {
-  const result = await db.select().from(customers).where(eq(customers.id, id));
+  const result = await db.select().from(Customers).where(eq(Customers.id, id));
   return result[0] || null;
 }
 
 export async function searchCustomers(query: string) {
   return await db
     .select()
-    .from(customers)
-    .where(like(customers.name, `%${query}%`))
-    .orderBy(asc(customers.name));
+    .from(Customers)
+    .where(like(Customers.name, `%${query}%`))
+    .orderBy(asc(Customers.name));
 }
 
 export async function createCustomer(data: Omit<CustomerType, "id" | "createTS">) {
   const validated = customerCreateSchema.parse(data);
   
-  const result = await db.insert(customers).values({
+  const result = await db.insert(Customers).values({
     name: validated.name,
     email: validated.email,
   }).returning();
@@ -36,12 +36,12 @@ export async function updateCustomer(id: number, data: Omit<CustomerType, "id" |
   const validated = customerCreateSchema.parse(data);
   
   const result = await db
-    .update(customers)
+    .update(Customers)
     .set({
       name: validated.name,
       email: validated.email,
     })
-    .where(eq(customers.id, id))
+    .where(eq(Customers.id, id))
     .returning();
     
   return result[0];
@@ -51,23 +51,23 @@ export async function updateCustomer(id: number, data: Omit<CustomerType, "id" |
 export async function getInvoices() {
   return await db
     .select({
-      ...invoices,
-      customerName: customers.name,
+      ...Invoices,
+      customerName: Customers.name,
     })
-    .from(invoices)
-    .leftJoin(customers, eq(invoices.customerId, customers.id))
-    .orderBy(desc(invoices.createTS));
+    .from(Invoices)
+    .leftJoin(Customers, eq(Invoices.customerId, Customers.id))
+    .orderBy(desc(Invoices.createTS));
 }
 
 export async function getInvoiceById(id: number) {
   const result = await db
     .select({
-      ...invoices,
-      customerName: customers.name,
+      ...Invoices,
+      customerName: Customers.name,
     })
-    .from(invoices)
-    .leftJoin(customers, eq(invoices.customerId, customers.id))
-    .where(eq(invoices.id, id));
+    .from(Invoices)
+    .leftJoin(Customers, eq(Invoices.customerId, Customers.id))
+    .where(eq(Invoices.id, id));
     
   return result[0] || null;
 }
@@ -75,25 +75,40 @@ export async function getInvoiceById(id: number) {
 export async function getInvoicesByCustomerId(customerId: number) {
   return await db
     .select()
-    .from(invoices)
-    .where(eq(invoices.customerId, customerId))
-    .orderBy(desc(invoices.createTS));
+    .from(Invoices)
+    .where(eq(Invoices.customerId, customerId))
+    .orderBy(desc(Invoices.createTS));
 }
 
 export async function getInvoicesByStatus(status: InvoiceStatus) {
   return await db
     .select({
-      ...invoices,
-      customerName: customers.name,
+      ...Invoices,
+      customerName: Customers.name,
     })
-    .from(invoices)
-    .leftJoin(customers, eq(invoices.customerId, customers.id))
-    .where(eq(invoices.status, status))
-    .orderBy(desc(invoices.createTS));
+    .from(Invoices)
+    .leftJoin(Customers, eq(Invoices.customerId, Customers.id))
+    .where(eq(Invoices.status, status))
+    .orderBy(desc(Invoices.createTS));
 }
 
 const invoiceCreateSchema = z.object({
-  value: z.number().int().positive("Value must be a positive number"),
+  // Value is stored as cents in the database (integer)
+  // The UI sends value in cents (already rounded to 2 decimal places and multiplied by 100)
+  value: z.number().int().positive("Value must be a positive number")
+    .refine(
+      val => {
+        // When converting back to decimal, ensure it represents a valid monetary value
+        const decimal = val / 100;
+        return Number.isFinite(decimal) && decimal > 0 && 
+               // Check that when formatted with 2 decimals and parsed back, we get the same value
+               // This ensures it had at most 2 decimal places originally
+               Math.round(decimal * 100) === val;
+      },
+      {
+        message: "Value must be a valid monetary amount with at most 2 decimal places"
+      }
+    ),
   description: z.string().optional(),
   customerId: z.number().int().positive("Customer ID is required"),
   status: z.enum([
@@ -112,7 +127,7 @@ const customerCreateSchema = z.object({
 export async function createInvoice(data: Omit<InvoiceType, "id" | "createTS">) {
   const validated = invoiceCreateSchema.parse(data);
   
-  const result = await db.insert(invoices).values({
+  const result = await db.insert(Invoices).values({
     value: validated.value,
     description: validated.description || null,
     customerId: validated.customerId,
@@ -147,9 +162,9 @@ export async function updateInvoice(id: number, data: Partial<Omit<InvoiceType, 
   }
   
   const result = await db
-    .update(invoices)
+    .update(Invoices)
     .set(updateData)
-    .where(eq(invoices.id, id))
+    .where(eq(Invoices.id, id))
     .returning();
     
   return result[0];
@@ -157,9 +172,9 @@ export async function updateInvoice(id: number, data: Partial<Omit<InvoiceType, 
 
 export async function updateInvoiceStatus(id: number, status: InvoiceStatus) {
   const result = await db
-    .update(invoices)
+    .update(Invoices)
     .set({ status })
-    .where(eq(invoices.id, id))
+    .where(eq(Invoices.id, id))
     .returning();
     
   return result[0];
@@ -168,18 +183,18 @@ export async function updateInvoiceStatus(id: number, status: InvoiceStatus) {
 export async function getInvoicesStats() {
   const result = await db.select({
     totalInvoices: sql<number>`count(*)`,
-    totalAmount: sql<number>`sum(${invoices.value})`,
-    paidAmount: sql<number>`sum(case when ${invoices.status} = 'paid' then ${invoices.value} else 0 end)`,
-    outstandingAmount: sql<number>`sum(case when ${invoices.status} = 'open' then ${invoices.value} else 0 end)`,
-    voidAmount: sql<number>`sum(case when ${invoices.status} = 'void' then ${invoices.value} else 0 end)`,
-    uncollectibleAmount: sql<number>`sum(case when ${invoices.status} = 'uncollectible' then ${invoices.value} else 0 end)`
-  }).from(invoices);
+    totalAmount: sql<number>`sum(${Invoices.value})`,
+    paidAmount: sql<number>`sum(case when ${Invoices.status} = 'paid' then ${Invoices.value} else 0 end)`,
+    outstandingAmount: sql<number>`sum(case when ${Invoices.status} = 'open' then ${Invoices.value} else 0 end)`,
+    voidAmount: sql<number>`sum(case when ${Invoices.status} = 'void' then ${Invoices.value} else 0 end)`,
+    uncollectibleAmount: sql<number>`sum(case when ${Invoices.status} = 'uncollectible' then ${Invoices.value} else 0 end)`
+  }).from(Invoices);
   
   return result[0];
 }
 
 export async function deleteInvoice(id: number) {
-  return await db.delete(invoices).where(eq(invoices.id, id)).returning();
+  return await db.delete(Invoices).where(eq(Invoices.id, id)).returning();
 }
 
 export async function deleteCustomer(id: number) {
@@ -189,5 +204,5 @@ export async function deleteCustomer(id: number) {
     throw new Error("Cannot delete customer with existing invoices");
   }
   
-  return await db.delete(customers).where(eq(customers.id, id)).returning();
+  return await db.delete(Customers).where(eq(Customers.id, id)).returning();
 }

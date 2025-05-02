@@ -1,15 +1,40 @@
 import { db } from '@/db';
-import { Invoices } from '@/db/schema';
-
+import { Customers, Invoices } from '@/db/schema';
+import { InvoicesTable } from '@/components/invoices/invoices-table';
+import { Button } from '@/components/ui/button';
+import { eq, desc } from 'drizzle-orm';
+import Link from 'next/link';
 
 export default async function Dashboard() {
-    const results = await db.select().from(Invoices);
-    console.log('result: ', results); // for testing
+    // Fetch invoices with customer names using a join
+    const invoices = await db
+        .select({
+            id: Invoices.id,
+            createTS: Invoices.createTS,
+            value: Invoices.value,
+            description: Invoices.description,
+            customerId: Invoices.customerId,
+            status: Invoices.status,
+            customerName: Customers.name,
+        })
+        .from(Invoices)
+        .leftJoin(Customers, eq(Invoices.customerId, Customers.id))
+        .orderBy(desc(Invoices.createTS)); // Sort by newest first
     
     return (
-        <main className="flex flex-col justify-center h-screen text-center gap-6 max-w-5xl mx-auto">
-            <h1 className="text-5xl font-bold">Dashboard</h1>
-            <p>Welcome to the dashboard!</p>
+        <main className="flex flex-col p-6 max-w-7xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Invoices Dashboard</h1>
+                <Link href="/invoice/new">
+                    <Button variant="default" size="default">
+                        Create New Invoice
+                    </Button>
+                </Link>
+            </div>
+            
+            <div className="rounded-md border bg-white">
+                <InvoicesTable invoices={invoices} />
+            </div>
         </main>
     );
 }
