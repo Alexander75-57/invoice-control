@@ -25,11 +25,18 @@ export default async function Dashboard() {
         <main className="flex flex-col p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Invoices Dashboard</h1>
-                <Link href="/invoice/new">
-                    <Button variant="default" size="default">
-                        Create New Invoice
-                    </Button>
-                </Link>
+                <div className="flex gap-3">
+                    <Link href="/invoice/new">
+                        <Button variant="default" size="default">
+                            Create New Invoice
+                        </Button>
+                    </Link>
+                    <Link href="/customer/new">
+                        <Button variant="outline" size="default">
+                            New Customer
+                        </Button>
+                    </Link>
+                </div>
             </div>
             
             <div className="rounded-md border bg-white">

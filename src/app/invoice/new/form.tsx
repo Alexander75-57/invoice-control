@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { NewInvoiceFormValues, newInvoiceFormSchema } from "./schema";
 import { createInvoiceAction } from "./actions";
 import { CustomerType, InvoiceStatus } from "@/db/schema";
+import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,10 @@ export default function NewInvoiceForm({ customers }: NewInvoiceFormProps) {
       setSubmitting(false);
     }
   }
+  
+  function handleBackClick() {
+    window.location.href = "/dashboard";
+  }
 
   // Find selected customer data
   const handleCustomerChange = (customerId: string) => {
@@ -86,6 +91,20 @@ export default function NewInvoiceForm({ customers }: NewInvoiceFormProps) {
 
   return (
     <Form {...form}>
+      {/* Back Button - Above the form fields */}
+      <div className="mb-6">
+        <Button 
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleBackClick}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </Button>
+      </div>
+      
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Customer Selection */}
         <FormField

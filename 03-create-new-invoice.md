@@ -8,7 +8,8 @@
    Description: any text
    Status: be default need to be "Open"
 
-  Below Fields: use shadcn components to create button "Submit" for to save data of new invoice in the data ba
+  Below Fields: use shadcn components to create button "Submit" for to save data of new invoice in the data base, after submit and and successful creation of the new user return to Invoices Dashboard 
 
-  Under Fields: use shadcn components to create button "Back" for return to Invoices Dashboard
+    Over Fields: use shadcn components to create button "Back" for return to Invoices Dashboard. Button creat like Arrow, for this use lucide library. 
+
    

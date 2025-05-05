@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { updateInvoiceStatus } from './actions';
+import { updateInvoiceStatus, deleteInvoice } from './actions';
 import { InvoiceStatus } from '@/db/schema';
+import { useRouter } from 'next/navigation';
 
 type Invoice = {
   id: number;
@@ -16,10 +17,12 @@ type Invoice = {
 };
 
 export default function InvoiceDetail({ invoice }: { invoice: Invoice }) {
+  const router = useRouter();
   const [status, setStatus] = useState(invoice.status);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Format date
   const formatDate = (date: Date) => {
@@ -52,6 +55,25 @@ export default function InvoiceDetail({ invoice }: { invoice: Invoice }) {
       setError(err instanceof Error ? err.message : 'Failed to update invoice status');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Delete invoice
+  const handleDeleteInvoice = async () => {
+    if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    setError(null);
+    
+    try {
+      await deleteInvoice(invoice.id);
+      // Redirect to dashboard after successful deletion
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete invoice');
+      setIsDeleting(false);
     }
   };
   
@@ -136,14 +158,24 @@ export default function InvoiceDetail({ invoice }: { invoice: Invoice }) {
         )}
       </div>
       
-      {/* Back Button */}
-      <div className="pt-4 mt-6 flex justify-start">
+      {/* Action Buttons */}
+      <div className="pt-4 mt-6 flex justify-between">
         <Button 
           variant="outline" 
           size="default"
-          onClick={() => window.location.href = "/dashboard"}
+          onClick={() => router.push('/dashboard')}
         >
           Back to Invoices Dashboard
+        </Button>
+        
+        <Button 
+          variant="destructive" 
+          size="default"
+          onClick={handleDeleteInvoice}
+          disabled={isDeleting}
+          className="bg-red-600 hover:bg-red-700 text-white"
+        >
+          {isDeleting ? 'Deleting...' : 'Delete Invoice'}
         </Button>
       </div>
     </div>
